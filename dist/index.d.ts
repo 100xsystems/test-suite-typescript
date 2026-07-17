@@ -36,7 +36,7 @@ export declare function dirExists(...segments: string[]): boolean;
 export declare function readFile(...segments: string[]): string;
 /**
  * Read and parse a JSON file.
- * Throws if the file does not exist or is not valid JSON.
+ * Throws with a descriptive error if the file does not exist or is not valid JSON.
  */
 export declare function readJson<T = any>(...segments: string[]): T;
 /**
@@ -45,15 +45,15 @@ export declare function readJson<T = any>(...segments: string[]): T;
  */
 export declare function listDir(dir: string, extension?: string): string[];
 /**
- * Check if a file at the given path contains the specified pattern (string or RegExp).
+ * Check if a file at the given relative path contains the specified pattern (string or RegExp).
  * Returns true if the pattern is found, false otherwise.
  */
-export declare function fileContains(path: string, pattern: string | RegExp): boolean;
+export declare function fileContains(relativePath: string, pattern: string | RegExp): boolean;
 /**
- * Check if a file at the given path matches the specified RegExp pattern.
+ * Check if a file at the given relative path matches the specified RegExp pattern.
  * Alias for fileContains with RegExp for readability.
  */
-export declare function fileMatches(path: string, pattern: RegExp): boolean;
+export declare function fileMatches(relativePath: string, pattern: RegExp): boolean;
 /**
  * Run `npm run build` and return the stdout output.
  * Throws if the build command fails.
@@ -65,8 +65,16 @@ export declare function runBuild(): string;
  */
 export declare function runCommand(command: string, timeout?: number): string;
 /**
+ * Assert that `npm run build` succeeds and produces output in dist/.
+ * Throws with a descriptive message if build fails or dist/ is missing.
+ * Used as the cumulative build check that appears in every lesson test.
+ */
+export declare function expectBuildSucceeds(): void;
+/**
  * Dynamically import a built module from the dist/ directory.
  * Useful for behavioral tests that run imported code.
+ *
+ * @param relativePath - Path relative to dist/ (e.g., 'llm/streaming.js')
  */
 export declare function importModule(relativePath: string): Promise<any>;
 //# sourceMappingURL=index.d.ts.map

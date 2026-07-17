@@ -75,11 +75,22 @@ export function readFile(...segments: string[]): string {
 
 /**
  * Read and parse a JSON file.
- * Throws if the file does not exist or is not valid JSON.
+ * Throws with a descriptive error if the file does not exist or is not valid JSON.
  */
 export function readJson<T = any>(...segments: string[]): T {
-  const content = fs.readFileSync(projectPath(...segments), 'utf-8');
-  return JSON.parse(content) as T;
+  const fp = projectPath(...segments);
+  if (!fs.existsSync(fp)) {
+    throw new Error(`readJson failed: file not found at ${fp}`);
+  }
+  try {
+    const content = fs.readFileSync(fp, 'utf-8');
+    return JSON.parse(content) as T;
+  } catch (e: any) {
+    if (e instanceof SyntaxError) {
+      throw new Error(`readJson failed: invalid JSON in ${fp} — ${e.message}`);
+    }
+    throw e;
+  }
 }
 
 /**

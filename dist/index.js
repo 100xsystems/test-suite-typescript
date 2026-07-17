@@ -67,11 +67,23 @@ export function readFile(...segments) {
 }
 /**
  * Read and parse a JSON file.
- * Throws if the file does not exist or is not valid JSON.
+ * Throws with a descriptive error if the file does not exist or is not valid JSON.
  */
 export function readJson(...segments) {
-    const content = fs.readFileSync(projectPath(...segments), 'utf-8');
-    return JSON.parse(content);
+    const fp = projectPath(...segments);
+    if (!fs.existsSync(fp)) {
+        throw new Error(`readJson failed: file not found at ${fp}`);
+    }
+    try {
+        const content = fs.readFileSync(fp, 'utf-8');
+        return JSON.parse(content);
+    }
+    catch (e) {
+        if (e instanceof SyntaxError) {
+            throw new Error(`readJson failed: invalid JSON in ${fp} — ${e.message}`);
+        }
+        throw e;
+    }
 }
 /**
  * List files in a directory, optionally filtered by extension.
@@ -89,24 +101,24 @@ export function listDir(dir, extension) {
 }
 // ─── Content Check Helpers ──────────────────────────────────────────
 /**
- * Check if a file at the given path contains the specified pattern (string or RegExp).
+ * Check if a file at the given relative path contains the specified pattern (string or RegExp).
  * Returns true if the pattern is found, false otherwise.
  */
-export function fileContains(path, pattern) {
-    if (!fs.existsSync(projectPath(path)))
+export function fileContains(relativePath, pattern) {
+    if (!fs.existsSync(projectPath(relativePath)))
         return false;
-    const content = readFile(path);
+    const content = readFile(relativePath);
     if (typeof pattern === 'string') {
         return content.includes(pattern);
     }
     return pattern.test(content);
 }
 /**
- * Check if a file at the given path matches the specified RegExp pattern.
+ * Check if a file at the given relative path matches the specified RegExp pattern.
  * Alias for fileContains with RegExp for readability.
  */
-export function fileMatches(path, pattern) {
-    return fileContains(path, pattern);
+export function fileMatches(relativePath, pattern) {
+    return fileContains(relativePath, pattern);
 }
 // ─── Build Helpers ──────────────────────────────────────────────────
 import { execSync } from 'child_process';
@@ -132,10 +144,29 @@ export function runCommand(command, timeout = 30000) {
         timeout,
     });
 }
+// ─── Build Assertion ───────────────────────────────────────────────
+/**
+ * Assert that `npm run build` succeeds and produces output in dist/.
+ * Throws with a descriptive message if build fails or dist/ is missing.
+ * Used as the cumulative build check that appears in every lesson test.
+ */
+export function expectBuildSucceeds() {
+    runBuild();
+    const distDir = projectPath('dist');
+    if (!fs.existsSync(distDir)) {
+        throw new Error('Build succeeded but dist/ directory was not created.');
+    }
+    const contents = fs.readdirSync(distDir);
+    if (contents.length === 0) {
+        throw new Error('Build succeeded but dist/ directory is empty.');
+    }
+}
 // ─── Dynamic Import Helper ──────────────────────────────────────────
 /**
  * Dynamically import a built module from the dist/ directory.
  * Useful for behavioral tests that run imported code.
+ *
+ * @param relativePath - Path relative to dist/ (e.g., 'llm/streaming.js')
  */
 export async function importModule(relativePath) {
     return import(projectPath('dist', relativePath));
