@@ -22,10 +22,10 @@
   "keywords": ["100xsystems", "testing", "vitest", "helpers"],
   "license": "MIT",
   "dependencies": {
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.5.0"
   }
 }
