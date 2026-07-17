@@ -1,6 +1,6 @@
 {
   "name": "@100xsystems/test-suite-typescript",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Shared test helpers for 100xSystems TypeScript curriculum. Provides vitest re-exports, file/directory assertion helpers, and build verification utilities.",
   "type": "module",
   "main": "./dist/index.js",

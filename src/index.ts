@@ -39,13 +39,16 @@ export const PROJECT: string = process.cwd();
  * projectPath('src', 'tools', 'registry.ts') // → /abs/path/src/tools/registry.ts
  */
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import { randomBytes } from 'crypto';
+import { execSync } from 'child_process';
+
 export function projectPath(...segments: string[]): string {
   return path.join(PROJECT, ...segments);
 }
 
 // ─── File Helpers ───────────────────────────────────────────────────
-
-import fs from 'fs';
 
 /**
  * Check if a file exists at the given path relative to PROJECT.
@@ -132,8 +135,6 @@ export function fileMatches(relativePath: string, pattern: RegExp): boolean {
 
 // ─── Build Helpers ──────────────────────────────────────────────────
 
-import { execSync } from 'child_process';
-
 /**
  * Run `npm run build` and return the stdout output.
  * Throws if the build command fails.
@@ -174,6 +175,79 @@ export function expectBuildSucceeds(): void {
   const contents = fs.readdirSync(distDir);
   if (contents.length === 0) {
     throw new Error('Build succeeded but dist/ directory is empty.');
+  }
+}
+
+// ─── Temp Directory Helpers ─────────────────────────────────────────
+
+/**
+ * Create a temporary directory and pass its path to the callback.
+ * The directory is automatically cleaned up after the callback resolves.
+ *
+ * @example
+ * ```typescript
+ * it('creates a file in a temp dir', async () => {
+ *   await withTempDir(async (dir) => {
+ *     const fp = path.join(dir, 'test.txt');
+ *     fs.writeFileSync(fp, 'hello');
+ *     expect(fs.existsSync(fp)).toBe(true);
+ *   });
+ * });
+ * ```
+export async function withTempDir(
+  fn: (dir: string) => Promise<void> | void,
+  prefix = '100x-test-'
+): Promise<void> {
+  const suffix = randomBytes(4).toString('hex');
+  const tmpDir = path.join(os.tmpdir(), `${prefix}${suffix}`);
+  try {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    await fn(tmpDir);
+  } finally {
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+}
+
+/**
+ * Create a temporary file with the given content and pass its path to the callback.
+ * The file (and its parent directory) are automatically cleaned up after the callback resolves.
+ *
+ * @param name - The filename (e.g., 'test.txt')
+ * @param content - The content to write to the file
+ * @param fn - Callback that receives the absolute path to the temp file
+ *
+ * @example
+ * ```typescript
+ * it('reads a file correctly', async () => {
+ *   await withTempFile('config.json', '{"key": "value"}', async (filePath) => {
+ *     const content = fs.readFileSync(filePath, 'utf-8');
+ *     expect(JSON.parse(content).key).toBe('value');
+ *   });
+ * });
+ * ```
+ */
+export async function withTempFile(
+  name: string,
+  content: string,
+  fn: (filePath: string) => Promise<void> | void
+): Promise<void> {
+  const suffix = randomBytes(4).toString('hex');
+  const tmpDir = path.join(os.tmpdir(), `100x-test-file-${suffix}`);
+  try {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const filePath = path.join(tmpDir, name);
+    fs.writeFileSync(filePath, content, 'utf-8');
+    await fn(filePath);
+  } finally {
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup
+    }
   }
 }
 
